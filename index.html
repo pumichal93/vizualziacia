@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+
+<script type="text/javascript" src="node_modules/three/build/three.min.js"></script>
+<script type="text/javascript" src="js/OrbitControls.js"></script>
+<script type="text/javascript" src="js/Projector.js"></script>
+<script>
+
+			var container, stats;
+			var camera, scene, renderer, raycaster;
+
+			var group;
+			var mouse = new THREE.Vector2(), INTERSECTED;
+			var targetRotation = 0;
+			var targetRotationOnMouseDown = 0;
+
+			var mouseX = 0;
+			var mouseXOnMouseDown = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+
+			var radius = 100, theta = 0;
+
+			init();
+			animate();
+
+			function init() {
+
+				document.addEventListener( 'click', onDocumentMouseDown, false );
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				var info = document.createElement( 'div' );
+				info.style.position = 'absolute';
+				info.style.top = '10px';
+				info.style.width = '100%';
+				info.style.textAlign = 'center';
+				info.innerHTML = 'Simple procedurally-generated shapes<br/>Drag to spin';
+				container.appendChild( info );
+
+
+
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xf0f0f0 );
+				var width = window.innerWidth;
+				var height = window.innerHeight;
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera.position.set( 0, 0, 300 );
+				scene.add( camera );
+
+				controls = new THREE.OrbitControls(camera, renderer);
+
+				var light = new THREE.PointLight( 0xffffff, 0.8 );
+				camera.add( light );
+
+				var projector = new THREE.Projector();
+				var directionVector = new THREE.Vector3();
+				raycaster = new THREE.Raycaster();
+
+				group = new THREE.Group();
+				//group.position.z = 400;
+				//scene.add( group );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+			}
+				function onDocumentMouseDown( event ) {
+
+				    event.preventDefault();
+
+ event.preventDefault();
+    //mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    //mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+
+    raycaster.setFromCamera( mouse, camera );
+
+    var intersects = raycaster.intersectObjects( scene.children );
+
+    if ( intersects.length > 0 ) {
+            //alert("selected!");
+            intersects[0].object.position.y = 0;
+            scene.add(intersects[0]);
+            _SELECTED_DOWN = true;
+    }    
+
+				   /* raycaster.setFromCamera( mouse, camera );
+
+					var intersects = raycaster.intersectObjects( group.children ); 
+
+				    if ( intersects.length > 0 ) {
+				    	console.log("detect");
+				         //intersects[0].object.callback();
+				         if ( INTERSECTED != intersects[ 0 ].object ) {
+							if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+								INTERSECTED = intersects[ 0 ].object;
+								INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+								INTERSECTED.material.emissive.setHex( 0xff0000 );
+							}
+						} else {
+							if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+								INTERSECTED = null;
+
+				    }*/
+				}
+
+				function addShape( polygon, attribute, extrudeSettings, color, x, y, z, rx, ry, rz, s ) {
+
+					var shape = new THREE.Shape( polygon );
+					// extruded shape
+					var geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
+					//geometry.addAtribute("optical", new THREE.BufferAttribute(attribute, 3));
+					//geometry.addAtribute("accelerometer", new THREE.BufferAttribute(attribute, 3));
+					var mesh = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial( { color: color } ) );
+					mesh.position.set( x, y, z );
+					mesh.rotation.set( rx, ry, rz );
+					mesh.scale.set( s, s, s );
+					mesh.userData = attribute;
+					mesh.callback = function() { console.log( this.name ); }
+					scene.add( mesh );
+
+					//addLineShape( circleShape, x, y, z, rx, ry, rz, s );
+
+				}
+
+				function addSolidLine( shape, x, y, z, rx, ry, rz, s ) {
+					shape.autoClose = true;
+
+					var points = shape.getPoints();
+					var spacedPoints = shape.getSpacedPoints( 50 );
+					var geometryPoints = new THREE.BufferGeometry().setFromPoints( points );
+					var geometrySpacedPoints = new THREE.BufferGeometry().setFromPoints( spacedPoints );
+
+					var line = new THREE.Line( geometrySpacedPoints, new THREE.LineBasicMaterial( { color: "#000000", linewidth: 3 } ) );
+					line.position.set( x, y, z );
+					line.rotation.set( rx, ry, rz );
+					line.scale.set( s, s, s );
+					//scene.add( line );
+
+				}
+
+				function addLineShape( shape, x, y, z, rx, ry, rz, s ) {
+
+					shape.autoClose = true;
+
+					var points = shape.getPoints();
+					var spacedPoints = shape.getSpacedPoints( 50 );
+
+					var geometryPoints = new THREE.BufferGeometry().setFromPoints( points );
+					var geometrySpacedPoints = new THREE.BufferGeometry().setFromPoints( spacedPoints );
+
+					// solid line
+
+					
+
+					// line from equidistance sampled points
+
+					/*var line = new THREE.Line( geometrySpacedPoints, new THREE.LineBasicMaterial( { color: color, linewidth: 3 } ) );
+					line.position.set( x, y, z + 25 );
+					line.rotation.set( rx, ry, rz );
+					line.scale.set( s, s, s );
+					group.add( line );*/
+
+					// vertices from real points
+
+					/*var particles = new THREE.Points( geometryPoints, new THREE.PointsMaterial( { color: color, size: 4 } ) );
+					particles.position.set( x, y, z + 75 );
+					particles.rotation.set( rx, ry, rz );
+					particles.scale.set( s, s, s );
+					gr
+
+
+					oup.add( particles );*/
+
+					// equidistance sampled points
+
+					var particles = new THREE.Points( geometrySpacedPoints, new THREE.PointsMaterial( { color: "#B8B8B8", size: 1 } ) );
+					particles.position.set( x, y, z + 0 );
+					particles.rotation.set( rx, ry, rz );
+					particles.scale.set( s, s, s );
+					//scene.add( particles );
+				}
+				// Circle
+
+				var circleRadius = 20;
+				var circleShape = new THREE.Shape();
+				circleShape.moveTo( 0, circleRadius );
+				circleShape.quadraticCurveTo( circleRadius, circleRadius, circleRadius, 0 );
+				circleShape.quadraticCurveTo( circleRadius, - circleRadius, 0, - circleRadius );
+				circleShape.quadraticCurveTo( - circleRadius, - circleRadius, - circleRadius, 0 );
+				circleShape.quadraticCurveTo( - circleRadius, circleRadius, 0, circleRadius );
+
+
+
+
+				// Spline shape
+
+				var splinepts = [];
+				splinepts.push( new THREE.Vector2( 70, 20 ) );
+				splinepts.push( new THREE.Vector2( 80, 90 ) );
+				splinepts.push( new THREE.Vector2( - 30, 70 ) );
+				splinepts.push( new THREE.Vector2( 0, 0 ) );
+
+				var splineShape = new THREE.Shape();
+				splineShape.moveTo( 0, 0 );
+				splineShape.splineThru( splinepts );
+
+				// SpiderWebPolygon
+				//console.log(computePoint({x: 0, y: 0}, {x: 0, y: 1}, - Math.PI / 4));
+				//console.log(Math.sin(Math.PI / 2));
+				// different colors palethe 
+				class Colors {
+					constructor(colors) {
+						this.colors = colors;
+					}
+
+					getColor(item) {
+						return this.colors[item % this.colors.length];
+					}
+				}
+				var colorsPalethe = [
+					"#e6194b",
+					"#3cb44b",
+					"#ffe119",
+					"#0082c8"	
+				]
+
+				var colors = new Colors(colorsPalethe);
+
+
+				function computePoint(center, point, angle) {
+					var newX = center.x + (point.x - center.x) * Math.cos(angle) + (center.y - point.y) * Math.sin(angle);
+					var newY = center.y + (point.y - center.y ) * Math.cos(angle) + (point.x - center.x) * Math.sin(angle);
+
+					centerPointVector = {x: center.x - point.x, y: center.y - point.y};
+					//return {x: newX + sizeDifference*centerPointVector.x, y: newY + sizeDifference*centerPointVector.y};
+					return {x: newX, y: newY};
+				}
+
+				function cretePolygonItem(data,y, size, angle, center, settings, color) {
+					var polygon = [];
+					var spiderWeb = [];
+					var ray = [];
+					var i = 0;
+						var geoAttribute = new Float32Array([0, 0, 0, 0, 0, 0]);
+
+					// start point
+					var spiderWebPoint = {x: center.x, y: center.y + data[0] * size / 2};
+					var polygonPoint = {x: center.x, y: center.y + 1 * size / 2};
+
+					spiderWeb.push(new THREE.Vector2(spiderWebPoint.x, spiderWebPoint.y));
+					polygon.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+					ray.push(new THREE.Vector2(center.x, center.y));
+					ray.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+
+
+					//addLineShape( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+					addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+					for (i=0; i < (data.length - 1); i++) {
+						ray.length = 0;
+						geoAttribute[i] = data[i];
+						spiderWebPoint = computePoint(center, {x: center.x, y: center.y + data[i + 1] * size / 2}, - (angle + i* angle));
+						polygonPoint = computePoint(center, {x: center.x, y: center.y + 1 * size / 2}, - (angle + i* angle));
+
+						spiderWeb.push(new THREE.Vector2(spiderWebPoint.x, spiderWebPoint.y));
+						polygon.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+
+						ray.push(new THREE.Vector2(center.x, center.y));
+						ray.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+
+
+						addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+					}
+					geoAttribute[i] = data[i];
+					polygonPoint = computePoint(center, {x: center.x, y: center.y + 1 * size / 2}, - (angle + i* angle));
+					polygon.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+
+					ray.length = 0;
+					ray.push(new THREE.Vector2(center.x, center.y));
+					ray.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
+					addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+
+					addShape( spiderWeb, geoAttribute, settings, color, 0, -40, 120 - y, 0, 0, 0, 1 );
+					addLineShape( new THREE.Shape( polygon ), 0, -40, 120 - y, 0, 0, 0, 1 );
+					//addShape( circleShape,      extrudeSettings, 0x00f000,  -180,  0, 0, 0, 0, 0, 1 );
+				}
+
+				var data = {
+					0: [0.8, 0.76, 0.3, 0.66, 0.51, 0.5],
+					1: [0.85, 0.70, 0.31, 0.66, 0.60, 0.912],
+					2: [0.55, 0.51, 0.35, 0.66, 0.70, 0.81],
+					3: [0.80, 0.70, 0.31, 0.66, 0.60, 0.912],
+					4: [0.8, 0.76, 0.3, 0.66, 0.51, 0.5],
+					5: [0.85, 0.70, 0.31, 0.66, 0.60, 0.912],
+					6: [0.55, 0.51, 0.35, 0.66, 0.70, 0.81],
+					7: [0.8, 0.76, 0.3, 0.66, 0.51, 0.5],
+					8: [0.85, 0.70, 0.31, 0.66, 0.60, 0.912],
+					9: [0.55, 0.51, 0.35, 0.66, 0.70, 0.81],
+					10: [0.8, 0.76, 0.3, 0.66, 0.51, 0.5],
+					11: [0.85, 0.70, 0.31, 0.66, 0.60, 0.912],
+					12: [0.55, 0.51, 0.35, 0.66, 0.70, 0.81]
+				};
+
+				var polygon = [];
+
+				var size = 40;
+				var angle = 2 * Math.PI / data["0"].length;
+				var center = {x : 0, y : 0};
+				var extrudeSettings = { amount: 1, bevelEnabled: true, bevelSegments: 1, steps: 1, bevelSize: 1, bevelThickness: 1 };
+
+				var y = 0;
+				for (var key in data) {
+					cretePolygonItem(data[ key ],y, 40, angle, center, extrudeSettings, colors.getColor(parseInt(key)));
+					y-=3;
+				}
+			
+/*
+				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+*/
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			function onDocumentMouseMove( event ) {
+				event.preventDefault();
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+			}
+
+			function render() {
+
+				raycaster.setFromCamera( mouse, camera );
+
+					var intersects = raycaster.intersectObjects( group.children ); 
+
+				    if ( intersects.length > 0 ) {
+				    	intersects[0].object.visible = false;
+				    	//console.log("detect");
+				    	if (intersects[0].isObject) {
+				    		console.log("YES");
+				    	}
+				         //intersects[0].object.callback();
+				         if ( INTERSECTED == intersects[ 0 ].object ) {
+							if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+								INTERSECTED = intersects[ 0 ].object;
+								INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+								INTERSECTED.material.emissive.setHex( 0xff0000 );
+							}
+						} else {
+							if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+								INTERSECTED = null;
+
+				    }
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+</body>
+</html>
