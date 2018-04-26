@@ -5,6 +5,9 @@
 </head>
 <body>
 
+<div id = "data">
+	<p></p>
+</div>
 <script type="text/javascript" src="node_modules/three/build/three.min.js"></script>
 <script type="text/javascript" src="js/OrbitControls.js"></script>
 <script type="text/javascript" src="js/Projector.js"></script>
@@ -24,7 +27,9 @@
 			var windowHalfX = window.innerWidth / 2;
 
 			var radius = 100, theta = 0;
+			var objects = [];
 
+			var isRay = true;
 			init();
 			animate();
 
@@ -44,6 +49,7 @@
 				info.innerHTML = 'Simple procedurally-generated shapes<br/>Drag to spin';
 				container.appendChild( info );
 
+				var info = document.createElement( 'div' );
 
 
 
@@ -64,7 +70,8 @@
 				var directionVector = new THREE.Vector3();
 				raycaster = new THREE.Raycaster();
 
-				group = new THREE.Group();
+				group = null;
+				out_group = new THREE.Group();
 				//group.position.z = 400;
 				//scene.add( group );
 
@@ -79,19 +86,20 @@
 				    event.preventDefault();
 
  event.preventDefault();
-    //mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    //mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
     var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
 
     raycaster.setFromCamera( mouse, camera );
 
-    var intersects = raycaster.intersectObjects( scene.children );
+    var intersects = raycaster.intersectObjects( objects, true);
 
     if ( intersects.length > 0 ) {
             //alert("selected!");
             intersects[0].object.position.y = 0;
-            scene.add(intersects[0]);
+            //scene.add(intersects[0]);
+            if (intersects[0].object.userData.length > 0) {
+            	document.getElementById("data").innerHTML = intersects[0].object.userData[0];
+            }
             _SELECTED_DOWN = true;
     }    
 
@@ -128,8 +136,8 @@
 					mesh.scale.set( s, s, s );
 					mesh.userData = attribute;
 					mesh.callback = function() { console.log( this.name ); }
-					scene.add( mesh );
-
+					//scene.add( mesh );
+					group.add (mesh);
 					//addLineShape( circleShape, x, y, z, rx, ry, rz, s );
 
 				}
@@ -146,7 +154,7 @@
 					line.position.set( x, y, z );
 					line.rotation.set( rx, ry, rz );
 					line.scale.set( s, s, s );
-					//scene.add( line );
+					group.add( line );
 
 				}
 
@@ -189,6 +197,8 @@
 					particles.position.set( x, y, z + 0 );
 					particles.rotation.set( rx, ry, rz );
 					particles.scale.set( s, s, s );
+
+					out_group.add(particles);
 					//scene.add( particles );
 				}
 				// Circle
@@ -253,7 +263,9 @@
 					var spiderWeb = [];
 					var ray = [];
 					var i = 0;
-						var geoAttribute = new Float32Array([0, 0, 0, 0, 0, 0]);
+					var geoAttribute = new Float32Array([0, 0, 0, 0, 0, 0]);
+
+					group = new THREE.Group();
 
 					// start point
 					var spiderWebPoint = {x: center.x, y: center.y + data[0] * size / 2};
@@ -266,7 +278,9 @@
 
 
 					//addLineShape( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
-					addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+					if (isRay) {
+						addSolidLine( new THREE.Shape( ray ), -40, 120 - y + 2, 0, 0, 0, 1 );
+					}
 					for (i=0; i < (data.length - 1); i++) {
 						ray.length = 0;
 						geoAttribute[i] = data[i];
@@ -279,8 +293,9 @@
 						ray.push(new THREE.Vector2(center.x, center.y));
 						ray.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
 
-
-						addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+						if (isRay) {
+							addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+						}
 					}
 					geoAttribute[i] = data[i];
 					polygonPoint = computePoint(center, {x: center.x, y: center.y + 1 * size / 2}, - (angle + i* angle));
@@ -289,10 +304,16 @@
 					ray.length = 0;
 					ray.push(new THREE.Vector2(center.x, center.y));
 					ray.push(new THREE.Vector2(polygonPoint.x, polygonPoint.y));
-					addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
-
+					if (isRay) {
+						addSolidLine( new THREE.Shape( ray ), 0, -40, 120 - y + 2, 0, 0, 0, 1 );
+					}
+					isRay = false;
 					addShape( spiderWeb, geoAttribute, settings, color, 0, -40, 120 - y, 0, 0, 0, 1 );
 					addLineShape( new THREE.Shape( polygon ), 0, -40, 120 - y, 0, 0, 0, 1 );
+					scene.add( out_group );
+					scene.add( group );
+					//objects.push(out_group);
+					objects.push(group);
 					//addShape( circleShape,      extrudeSettings, 0x00f000,  -180,  0, 0, 0, 0, 0, 1 );
 				}
 
@@ -322,7 +343,7 @@
 				var y = 0;
 				for (var key in data) {
 					cretePolygonItem(data[ key ],y, 40, angle, center, extrudeSettings, colors.getColor(parseInt(key)));
-					y-=3;
+					y+=5;
 				}
 			
 /*
@@ -356,11 +377,12 @@
 
 			function render() {
 
-				raycaster.setFromCamera( mouse, camera );
+				/*raycaster.setFromCamera( mouse, camera );
 
 					var intersects = raycaster.intersectObjects( group.children ); 
 
 				    if ( intersects.length > 0 ) {
+				    	//for (intersects)
 				    	intersects[0].object.visible = false;
 				    	//console.log("detect");
 				    	if (intersects[0].isObject) {
@@ -377,7 +399,7 @@
 							if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
 								INTERSECTED = null;
 
-				    }
+				    }*/
 
 				renderer.render( scene, camera );
 
