@@ -17,7 +17,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	this.object = object;
 
-	this.domElement = ( domElement !== undefined ) ? domElement : document;
+	this.domElement = ( domElement !== undefined ) ? domElement : document.getElementById('container');
 
 	// Set to false to disable this control
 	this.enabled = true;
